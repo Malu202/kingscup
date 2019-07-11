@@ -7,50 +7,57 @@ const MINIMUM_ID_LENGTH = 3;
 const AUFDECK_DELAY = 5000;
 const ANTWORT_TIMEOUT = 5000;
 
-let games = [];
+var games = [];
 
 function newGameId() {
-    let number = games.length;
-    let id = "" + number;
+    var number = games.length;
+    var id = "" + number;
     while (id.length < MINIMUM_ID_LENGTH) {
         id = "0" + id;
     }
+    return id;
 }
 
 function generateCards(amountOfDecks) {
-    let unshuffledDeck = [];
-    for (let i = 0; i < amountOfDecks * 52; i++) {
-        unshuffledDeck.push(i);
+    var unshuffledDeck = [];
+    for (var j = 0; j < amountOfDecks; j++) {
+        for (var i = 1; i < 53; i++) {
+            unshuffledDeck.push(i);
+        }
     }
-    let shuffledDeck = [];
-    for (let i = 0; i < amountOfDecks * 52; i++) {
-        let cardIndex = Math.round((Math.random() * (unshuffledDeck.length - 1)));
+    var shuffledDeck = [];
+    for (var i = 0; i < amountOfDecks * 52; i++) {
+        var cardIndex = Math.round((Math.random() * (unshuffledDeck.length - 1)));
         shuffledDeck.push(unshuffledDeck.splice(cardIndex, 1)[0]);
     }
     return shuffledDeck;
 }
 
 function zeitenSenden(game) {
-    for (let client in game.clients) {
+    for (var client of game.clients) {
         if (null != client.zeit) {
-            client.delay = (+client.zeit - client.sendeZeit) / 2;
+            client.delay = (+client.zeit - +client.sendeZeit - client.ladezeit) / 2;
         }
         else {
             client.delay = null;
         }
     }
-    let delays = clients.filter(v => null != v.delay).map(v => v.delay);
-    delays.sort();
-    let minimum = delays[0];
-    for (let client in game.clients) {
-        client.ws.send(JSON.stringify({ type: "kartezeigen", delay: client.delay - minimum }));
+    var delays = game.clients.filter(v => null != v.delay).map(v => v.delay);
+    console.log(delays, maximum);
+    delays.sort((a, b) => a - b);
+    var maximum = delays[delays.length - 1];
+    for (var client of game.clients) {
+        if (client.delay != null) {
+            client.ws.send(JSON.stringify({ type: "aufdecken", delay: maximum - client.delay }));
+        }
     }
+    game.clients = game.clients.filter(c => !!c.zeit);
     game.aufdeckend = false;
 }
 
 wss.on("connection", function connection(ws) {
     ws.on("message", function incoming(message) {
-        let command;
+        var command;
         try {
             command = JSON.parse(message);
         }
@@ -62,63 +69,69 @@ wss.on("connection", function connection(ws) {
         }
         switch (command.type) {
             case "join":
-                let game = games.find(g => g.id === command.id);
+                var game = games.find(g => g.id === command.id);
                 if (null == game) {
                     ws.send(JSON.stringify({ type: "notfound" }));
                 }
                 else {
-                    game.clients.push({ ws: ws, zeit: null });
-                    ws.send(JSON.stringify({ type: "joined", karte: game.karte }));
+                    var joined = game.clients.find(c => c.ws == ws);
+                    if (joined) {
+                        console.warn("already joined");
+                    }
+                    else {
+                        game.clients.push({ ws: ws, zeit: null });
+                        ws.send(JSON.stringify({ type: "joined", karte: game.karte, id: game.id }));
+                    }
                 }
                 break;
             case "neu":
-                let game = {
+                var game = {
                     id: newGameId(),
                     clients: [{ ws: ws, zeit: null }],
                     karte: null,
                     cards: generateCards(command.decks),
-                    letztesAufdecken: new Date(),
+                    letztesAufdecken: new Date(+new Date() - AUFDECK_DELAY),
                     aufdeckend: false
                 };
                 games.push(game);
                 ws.send(JSON.stringify({ type: "created", id: game.id }));
                 break;
             case "aufdecken":
-                let game = games.find(g => g.id === command.id);
+                var game = games.find(g => g.id === command.id);
                 if (null == game) {
                     ws.send(JSON.stringify({ type: "notfound" }));
                 }
-                let client = game.clients.find(c => c.ws === ws);
+                var client = game.clients.find(c => c.ws === ws);
                 if (null == client) {
                     console.error("Client war nicht mehr dem Spiel zugeordnet");
                     ws.send(JSON.stringify({ type: "notfound" }));
                 }
-                let now = new Date();
+                var now = new Date();
                 if (+now - game.letztesAufdecken < AUFDECK_DELAY) {
-                    ws.send(JSON.stringify({ type: "delay" }));
+                    ws.send(JSON.stringify({ type: "delay-error" }));
                 }
                 else {
                     game.letztesAufdecken = now;
                     game.karte = game.cards.pop();
                     game.aufdeckend = true;
-                    for (let client of game.clients) {
+                    for (var client of game.clients) {
                         client.zeit = null;
                         client.sendeZeit = new Date();
-                        client.ws.send(JSON.stringify({ type: "aufdecken", karte: game.karte }));
+                        client.ws.send(JSON.stringify({ type: "aufdecken-vorbereiten", karte: game.karte, zeit: +new Date(), id: game.id }));
                     }
-                    setTimeout(ANTWORT_TIMEOUT, function () {
+                    setTimeout(function () {
                         if (game.aufdeckend) {
                             zeitenSenden(game);
                         }
-                    });
+                    }, ANTWORT_TIMEOUT);
                 }
                 break;
-            case "zeit":
-                let game = games.find(g => g.id === command.id);
+            case "ready":
+                var game = games.find(g => g.id === command.id);
                 if (null == game) {
                     ws.send(JSON.stringify({ type: "notfound" }));
                 }
-                let client = game.clients.find(c => c.ws === ws);
+                var client = game.clients.find(c => c.ws === ws);
                 if (null == client) {
                     ws.send("Client nicht gefunden!");
                 }
@@ -129,6 +142,7 @@ wss.on("connection", function connection(ws) {
                     game.clients.splice(game.clients.indexOf(client), 1);
                 } else {
                     client.zeit = new Date();
+                    client.ladezeit = command.ladezeit;
                     if (game.clients.every(c => null != c.zeit)) {
                         zeitenSenden(game);
                     }
