@@ -100,51 +100,55 @@ wss.on("connection", function connection(ws) {
                 var game = games.find(g => g.id === command.id);
                 if (null == game) {
                     ws.send(JSON.stringify({ type: "notfound" }));
-                }
-                var client = game.clients.find(c => c.ws === ws);
-                if (null == client) {
-                    console.error("Client war nicht mehr dem Spiel zugeordnet");
-                    ws.send(JSON.stringify({ type: "notfound" }));
-                }
-                var now = new Date();
-                if (+now - game.letztesAufdecken < AUFDECK_DELAY) {
-                    ws.send(JSON.stringify({ type: "delay-error" }));
-                }
-                else {
-                    game.letztesAufdecken = now;
-                    game.karte = game.cards.pop();
-                    game.aufdeckend = true;
-                    for (var client of game.clients) {
-                        client.zeit = null;
-                        client.sendeZeit = new Date();
-                        client.ws.send(JSON.stringify({ type: "aufdecken-vorbereiten", karte: game.karte, zeit: +new Date(), id: game.id }));
-                    }
-                    setTimeout(function () {
-                        if (game.aufdeckend) {
-                            zeitenSenden(game);
+                } else {
+                    var client = game.clients.find(c => c.ws === ws);
+                    if (null == client) {
+                        console.error("Client war nicht mehr dem Spiel zugeordnet");
+                        ws.send(JSON.stringify({ type: "notfound" }));
+                    } else {
+                        var now = new Date();
+                        if (+now - game.letztesAufdecken < AUFDECK_DELAY) {
+                            ws.send(JSON.stringify({ type: "delay-error" }));
                         }
-                    }, ANTWORT_TIMEOUT);
+                        else {
+                            game.letztesAufdecken = now;
+                            game.karte = game.cards.pop();
+                            game.aufdeckend = true;
+                            for (var client of game.clients) {
+                                client.zeit = null;
+                                client.sendeZeit = new Date();
+                                client.ws.send(JSON.stringify({ type: "aufdecken-vorbereiten", karte: game.karte, zeit: +new Date(), id: game.id }));
+                            }
+                            setTimeout(function () {
+                                if (game.aufdeckend) {
+                                    zeitenSenden(game);
+                                }
+                            }, ANTWORT_TIMEOUT);
+                        }
+                    }
                 }
                 break;
             case "ready":
                 var game = games.find(g => g.id === command.id);
                 if (null == game) {
                     ws.send(JSON.stringify({ type: "notfound" }));
-                }
-                var client = game.clients.find(c => c.ws === ws);
-                if (null == client) {
-                    ws.send("Client nicht gefunden!");
-                }
-                if (!game.aufdeckend) {
-                    console.error("Client hat nicht innerhalb von 5 Sekunden geantwortet");
-                    ws.send(JSON.stringify({ type: "notfound" }));
-                    ws.close();
-                    game.clients.splice(game.clients.indexOf(client), 1);
                 } else {
-                    client.zeit = new Date();
-                    client.ladezeit = command.ladezeit;
-                    if (game.clients.every(c => null != c.zeit)) {
-                        zeitenSenden(game);
+                    var client = game.clients.find(c => c.ws === ws);
+                    if (null == client) {
+                        ws.send("Client nicht gefunden!");
+                    } else {
+                        if (!game.aufdeckend) {
+                            console.error("Client hat nicht innerhalb von 5 Sekunden geantwortet");
+                            ws.send(JSON.stringify({ type: "notfound" }));
+                            ws.close();
+                            game.clients.splice(game.clients.indexOf(client), 1);
+                        } else {
+                            client.zeit = new Date();
+                            client.ladezeit = command.ladezeit;
+                            if (game.clients.every(c => null != c.zeit)) {
+                                zeitenSenden(game);
+                            }
+                        }
                     }
                 }
                 break;
