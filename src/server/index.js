@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 const wss = new WebSocket.Server({
-    port: 8080
+    port: 33712
 });
 
 const MINIMUM_ID_LENGTH = 3;
