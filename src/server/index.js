@@ -48,7 +48,11 @@ function zeitenSenden(game) {
     var maximum = delays[delays.length - 1];
     for (var client of game.clients) {
         if (client.delay != null) {
-            client.ws.send(JSON.stringify({ type: "aufdecken", delay: maximum - client.delay }));
+            client.ws.send(JSON.stringify({
+                type: "aufdecken",
+                delay: maximum - client.delay,
+                naechste: game.cards[game.cards.length - 1]
+            }));
         }
     }
     game.clients = game.clients.filter(c => !!c.zeit);
@@ -80,7 +84,12 @@ wss.on("connection", function connection(ws) {
                     }
                     else {
                         game.clients.push({ ws: ws, zeit: null });
-                        ws.send(JSON.stringify({ type: "joined", karte: game.karte, id: game.id }));
+                        ws.send(JSON.stringify({
+                            type: "joined",
+                            karte: game.karte,
+                            id: game.id,
+                            naechste: game.cards[game.cards.length - 1]
+                        }));
                     }
                 }
                 break;
@@ -94,7 +103,11 @@ wss.on("connection", function connection(ws) {
                     aufdeckend: false
                 };
                 games.push(game);
-                ws.send(JSON.stringify({ type: "created", id: game.id }));
+                ws.send(JSON.stringify({
+                    type: "created",
+                    id: game.id,
+                    naechste: game.cards[game.cards.length - 1]
+                }));
                 break;
             case "aufdecken":
                 var game = games.find(g => g.id === command.id);
