@@ -1,4 +1,4 @@
-var WS_SERVER = "ws://localhost:8080";
+var WS_SERVER = "ws://smallvm.westeurope.cloudapp.azure.com:33712";
 var IMAGE_DIR = "assets/";
 var IMAGE_SUFFIX = ".svg";
 
