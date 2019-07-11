@@ -118,8 +118,8 @@ function loadCardImage(cardNumber) {
         preloadedImage = document.createElement("img");
         preloadedImage.src = IMAGE_DIR + cardNumber + IMAGE_SUFFIX;
         preloadedImage.style.position = "absolute";
-        preloadedImage.style.top = "250px";
-        preloadedImage.style.left = "250px";
+        preloadedImage.style.top = "-9999px";
+        preloadedImage.style.left = "-9999px";
         console.log("request load " + preloadedImage.src);
         var listener = preloadedImage.addEventListener('load', function () {
             preloadedImage.removeEventListener('load', listener);
