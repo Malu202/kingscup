@@ -4,17 +4,25 @@
 <head>
     <title>Kings Cup</title>
     <!-- <link rel="shortcut icon" type="image/png" href="./assets/logo.svg"/> -->
-    <style>body{display:flex; flex-direction: column; max-width: 150px;} body * {margin:20px} #joinGame{margin-top:0} #cardImage{height:200px; width:120px}</style>
+    <!-- <style>body{display:flex; flex-direction: column; max-width: 150px;} body * {margin:20px} #joinGame{margin-top:0} #cardImage{height:200px; width:120px}</style> -->
+
+    <link rel="stylesheet" href="style.css">
+    <!-- Zoomen deaktivieren-->
+    <meta name="viewport" content="initial-scale = 1.0, maximum-scale = 1.0, user-scalable = no, width = device-width, height = device-height">
 </head>
 
 <body>
-    <div id="output"> output</div>
-    <!-- <img id="cardImage" src=""> -->
-    <div id="imageContainer"></div>
-    <button id="createGame">create Game</button>
-    <button id="getNewCard">New Card</button>
-    <input type="text" id="gameId" value="000">
-    <button id="joinGame">join Game</button>
+    <div class="loginPage">
+        <input type="text" id="gameId" value="000">
+        <button id="joinGame">join Game</button>
+        <button id="createGame">create Game</button>
+    </div>
+    <div class="gamePage">
+        <div id="output"> output</div>
+        <div id="imageContainer"></div>
+        <button id="getNewCard">Draw Card</button>
+    </div>
+    <script type="text/javascript" src="pageSwitcher.js"></script>
     <script type="text/javascript" src="index.js"></script>
 </body>
 

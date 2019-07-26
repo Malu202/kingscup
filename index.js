@@ -3,6 +3,9 @@ var WS_SERVER = "wss://smallvm.westeurope.cloudapp.azure.com:33712";
 var IMAGE_DIR = "assets/";
 var IMAGE_SUFFIX = ".svg";
 
+var pageSwitcher = new PageSwitcher();
+pageSwitcher.switchToPage("loginPage");
+
 var game = null;
 var socket = new WebSocket(WS_SERVER);
 socket.onopen = function () {
@@ -33,12 +36,14 @@ socket.onmessage = function (e) {
             game = { id: command.id, karte: null };
             output.innerHTML = "created " + game.id;
             cardLoadPromise = loadCardImage(command.naechste);
+            pageSwitcher.switchToPage("gamePage");
             break;
         case "joined":
             // command.karte <- jetzt
             // command.naechste <- preloaden
             game = { id: command.id, karte: command.karte };
-            output.innerHTML = "created " + game.id;
+            output.innerHTML = "joined " + game.id;
+            pageSwitcher.switchToPage("gamePage");
             function loadNaechste() {
                 cardLoadPromise = loadCardImage(command.naechste);
             }
@@ -57,7 +62,7 @@ socket.onmessage = function (e) {
             alert("notfound");
             break;
         case "delay-error":
-            alert("erst nach 5 sekunden wieder!!!");
+            output.innerHTML = "erst nach 5 sekunden wieder!!!";
             break;
         case "aufdecken-vorbereiten":
             if (command.id != game.id) {
@@ -136,10 +141,13 @@ function showCard() {
     if (null != currentImage) {
         imageContainer.removeChild(currentImage);
     }
-    preloadedImage.style.top = "0";
-    preloadedImage.style.left = "0";
-    preloadedImage.style.position = "relative";
+    // preloadedImage.style.top = "0";
+    // preloadedImage.style.left = "0";
+
+    // preloadedImage.style.position = "relative";
     currentImage = preloadedImage;
+    currentImage.id = "cardImage";
+    preloadedImage.classList.add("aspectRatioHack")
     currentImage.onclick = function () {
         getANewCard();
     }

@@ -1,0 +1,52 @@
+body, html{
+    margin: 0;
+    height: 100%;
+    width: 100%;
+}
+#joinGame{
+    margin-top:0
+} 
+
+#imageContainer{
+    flex: 1 1 auto;
+    overflow:hidden;
+    position:relative;
+}
+/* todo: media query für 4k und größer */
+.aspectRatioHack{
+    position: absolute!important;
+    left:-10000%!important;
+    right: -10000%!important; 
+    top: -10000%!important;
+    bottom: -10000%!important;
+    margin: auto auto!important;
+    max-width: 10%!important;
+    max-height: 10%!important;
+    -webkit-transform:scale(10) !important;
+    transform: scale(10)!important;
+}
+
+.gamePage{
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background-color: #477148;
+}
+
+
+.loginPage{
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+}
+.loginPage *{
+    max-width: 150px;
+    width: 100%;
+}
+#output{
+    color: white;
+}
