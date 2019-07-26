@@ -2,6 +2,7 @@
 var WS_SERVER = "wss://smallvm.westeurope.cloudapp.azure.com:33712";
 var IMAGE_DIR = "assets/";
 var IMAGE_SUFFIX = ".svg";
+var ENTER_KEY = "13";
 
 var pageSwitcher = new PageSwitcher();
 pageSwitcher.switchToPage("loginPage");
@@ -23,7 +24,7 @@ socket.onmessage = function (e) {
     try {
         command = JSON.parse(e.data);
     }
-    catch {
+    catch (e) {
         command = null;
     }
     if (!command || !command.type) {
@@ -63,6 +64,9 @@ socket.onmessage = function (e) {
             break;
         case "delay-error":
             output.innerHTML = "erst nach 5 sekunden wieder!!!";
+            setTimeout(function () {
+                output.innerHTML = game.id;
+            }, 5000);
             break;
         case "aufdecken-vorbereiten":
             if (command.id != game.id) {
@@ -160,6 +164,12 @@ joinGameButton.onclick = function () {
     var id = gameId.value;
     joinGame(id);
 }
+gameId.addEventListener("keyup", function (e) {
+    if (e.keyCode == ENTER_KEY) {
+        var id = gameId.value;
+        joinGame(id);
+    }
+});
 getNewCardButton.onclick = function () {
     getANewCard();
 }
