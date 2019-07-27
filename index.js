@@ -5,7 +5,10 @@ var IMAGE_SUFFIX = ".svg";
 var ENTER_KEY = "13";
 
 var pageSwitcher = new PageSwitcher();
-pageSwitcher.switchToPage("loginPage");
+document.addEventListener('DOMContentLoaded', function (event) {
+    //the event occurred
+    pageSwitcher.switchToPage("loginPage");
+})
 
 var game = null;
 var socket = new WebSocket(WS_SERVER);
@@ -181,8 +184,8 @@ function getANewCard() {
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js", {
         scope: "./"
-    })
-        .then((serviceWorker) => {
+    }).
+        then((serviceWorker) => {
             console.log("service worker registration successful");
         })
         .catch((err) => {
