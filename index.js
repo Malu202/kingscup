@@ -121,6 +121,7 @@ var gameId = document.getElementById("gameId");
 var getNewCardButton = document.getElementById("getNewCard");
 var cardImageViewer = document.getElementById("cardImage");
 var imageContainer = document.getElementById("imageContainer");
+var exit = document.getElementById("exit");
 
 var preloadedImage;
 var preloadedImageNumber = null;
@@ -179,6 +180,14 @@ getNewCardButton.onclick = function () {
 
 function getANewCard() {
     socket.send(JSON.stringify({ type: "aufdecken", id: game.id }));
+}
+
+exit.onclick = function(){
+    refresh();
+}
+
+function refresh() {
+    window.location.replace(window.location.pathname + window.location.search + window.location.hash);
 }
 
 if ("serviceWorker" in navigator) {
