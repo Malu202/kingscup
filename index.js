@@ -26,7 +26,7 @@ function getAdjustedServerTime() {
         delays.sort(function (a, b) { return a.delay - b.delay; });
         // return new Date(delays[0].serverTime + (delays[0].delay / 2) + (+new Date() - delays[0].responseTime));
         console.log("current delay: " + delays[0].delay);
-        return new Date(+new Date() + delays[0].serverOffset);
+        return new Date(delays[0].serverTime + (delays[0].delay / 2) + performance.now() - delays[0].responseTime);
     }
     return null;
 }
@@ -43,7 +43,7 @@ socket.onerror = function (error) {
 };
 var cardLoadPromise = Promise.resolve();
 socket.onmessage = function (e) {
-    var messageTime = new Date();
+    var messageTime = performance.now();
     console.log('Server: ' + e.data);
 
     var command;
@@ -135,9 +135,9 @@ socket.onmessage = function (e) {
                 serverOffset: command.time + ((messageTime - res.requestTime) / 2) - messageTime
             });
             console.log("received delay: " + (messageTime - res.requestTime));
-            times.responses = times.responses.filter(function (r) {
-                return r.responseTime - +new Date() < MAX_TIME_AGE;
-            });
+            // times.responses = times.responses.filter(function (r) {
+            //     return r.responseTime - performance.now() < MAX_TIME_AGE;
+            // });
             break;
         default:
             console.error("Falsches Kommando: " + command.type);
@@ -232,7 +232,7 @@ function refresh() {
 }
 
 function sendSyncRequest() {
-    times.requests.push({ requestTime: +new Date() });
+    times.requests.push({ requestTime: performance.now() });
     socket.send(JSON.stringify({ type: "getTime" }));
 }
 
@@ -255,6 +255,7 @@ function logTime() {
     else {
         setTimeout(logTime, 1000 - serverTime.getMilliseconds());
         showTime("" + serverTime.getSeconds());
+        console.log(serverTime);
     }
 }
 logTime();
