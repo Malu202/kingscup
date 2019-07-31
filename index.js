@@ -1,7 +1,9 @@
-// var WS_SERVER = "ws://localhost:33712";
-var WS_SERVER = "wss://smallvm.westeurope.cloudapp.azure.com:33712";
+var WS_SERVER = "ws://localhost:33712";
+//var WS_SERVER = "wss://smallvm.westeurope.cloudapp.azure.com:33712";
 var IMAGE_DIR = "assets/";
 var IMAGE_SUFFIX = ".svg";
+var TIMESYNCINTERVAL = 500;
+var MAX_TIME_AGE = 3 * 60 * 1000;
 var ENTER_KEY = "13";
 
 var pageSwitcher = new PageSwitcher();
@@ -11,9 +13,30 @@ document.addEventListener('DOMContentLoaded', function (event) {
 })
 
 var game = null;
+var times = {
+    syncRequestTime: null,
+    requests: [],
+    responses: []
+};
+function getAdjustedServerTime() {
+    if (times.responses && times.responses.length) {
+        var delays = times.responses.map(function (r) {
+            return Object.assign({}, r);
+        });
+        delays.sort(function (a, b) { return a.delay - b.delay; });
+        // return new Date(delays[0].serverTime + (delays[0].delay / 2) + (+new Date() - delays[0].responseTime));
+        console.log("current delay: " + delays[0].delay);
+        return new Date(+new Date() + delays[0].serverOffset);
+    }
+    return null;
+}
 var socket = new WebSocket(WS_SERVER);
 socket.onopen = function () {
     console.log("connected");
+    syncTime();
+    // setInterval(function () {
+    //     syncTime()
+    // }, 5000);
 };
 socket.onerror = function (error) {
     console.log('WebSocket Error ' + error);
@@ -97,6 +120,24 @@ socket.onmessage = function (e) {
                 console.log("ich bereite " + command.naechste + " vor, aber pschhhhhht");
                 cardLoadPromise = loadCardImage(command.naechste);
             }, command.delay);
+            break;
+        case "time":
+            var res = times.requests[0];
+            if (null == res) {
+                console.error("no time response found");
+            }
+            times.requests.splice(times.requests.indexOf(res), 1);
+            times.responses.push({
+                serverTime: command.time,
+                delay: messageTime - res.requestTime,
+                requestTime: res.requestTime,
+                responseTime: messageTime,
+                serverOffset: command.time + ((messageTime - res.requestTime) / 2) - messageTime
+            });
+            console.log("received delay: " + (messageTime - res.requestTime));
+            times.responses = times.responses.filter(function (r) {
+                return r.responseTime - +new Date() < MAX_TIME_AGE;
+            });
             break;
         default:
             console.error("Falsches Kommando: " + command.type);
@@ -182,13 +223,41 @@ function getANewCard() {
     socket.send(JSON.stringify({ type: "aufdecken", id: game.id }));
 }
 
-exit.onclick = function(){
+exit.onclick = function () {
     refresh();
 }
 
 function refresh() {
     window.location.replace(window.location.pathname + window.location.search + window.location.hash);
 }
+
+function sendSyncRequest() {
+    times.requests.push({ requestTime: +new Date() });
+    socket.send(JSON.stringify({ type: "getTime" }));
+}
+
+var counter = 0;
+
+function syncTime() {
+    times.requests = [];
+    sendSyncRequest();
+    if (counter < 30) {
+        counter++;
+        setTimeout(syncTime, TIMESYNCINTERVAL);
+    }
+}
+
+function logTime() {
+    var serverTime = getAdjustedServerTime();
+    if (null == serverTime) {
+        setTimeout(logTime, 1000);
+    }
+    else {
+        setTimeout(logTime, 1000 - serverTime.getMilliseconds());
+        showTime("" + serverTime.getSeconds());
+    }
+}
+logTime();
 
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js", {
@@ -202,4 +271,8 @@ if ("serviceWorker" in navigator) {
         });
 } else {
     console.log('service worker unavailable');
+}
+
+function showTime(time) {
+    output.innerHTML = time;
 }
