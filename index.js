@@ -274,6 +274,20 @@ if ("serviceWorker" in navigator) {
     console.log('service worker unavailable');
 }
 
+
+
+var raphiLog ="";
 function showTime(time) {
-    output.innerHTML = time;
+    output.innerHTML = raphiLog + time;
 }
+
+function focus() {
+    raphiLog += "f\n";
+}
+function blur(){
+    raphiLog += "b\n";
+}
+window.addEventListener("focus", focus);
+document.addEventListener("focus", focus);
+window.addEventListener("blur", blur);
+document.addEventListener("blur", blur);
