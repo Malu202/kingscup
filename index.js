@@ -1,7 +1,14 @@
 // var WS_SERVER = "ws://localhost:33712";
-var WS_SERVER = "ws://smallvm.westeurope.cloudapp.azure.com:33712";
+var WS_SERVER = "wss://smallvm.westeurope.cloudapp.azure.com:33712";
 var IMAGE_DIR = "assets/";
 var IMAGE_SUFFIX = ".svg";
+var ENTER_KEY = "13";
+
+var pageSwitcher = new PageSwitcher();
+document.addEventListener('DOMContentLoaded', function (event) {
+    //the event occurred
+    pageSwitcher.switchToPage("loginPage");
+})
 
 var game = null;
 var socket = new WebSocket(WS_SERVER);
@@ -20,7 +27,7 @@ socket.onmessage = function (e) {
     try {
         command = JSON.parse(e.data);
     }
-    catch {
+    catch (e) {
         command = null;
     }
     if (!command || !command.type) {
@@ -33,12 +40,14 @@ socket.onmessage = function (e) {
             game = { id: command.id, karte: null };
             output.innerHTML = "created " + game.id;
             cardLoadPromise = loadCardImage(command.naechste);
+            pageSwitcher.switchToPage("gamePage");
             break;
         case "joined":
             // command.karte <- jetzt
             // command.naechste <- preloaden
             game = { id: command.id, karte: command.karte };
-            output.innerHTML = "created " + game.id;
+            output.innerHTML = "joined " + game.id;
+            pageSwitcher.switchToPage("gamePage");
             function loadNaechste() {
                 cardLoadPromise = loadCardImage(command.naechste);
             }
@@ -57,7 +66,10 @@ socket.onmessage = function (e) {
             alert("notfound");
             break;
         case "delay-error":
-            alert("erst nach 5 sekunden wieder!!!");
+            output.innerHTML = "erst nach 5 sekunden wieder!!!";
+            setTimeout(function () {
+                output.innerHTML = game.id;
+            }, 5000);
             break;
         case "aufdecken-vorbereiten":
             if (command.id != game.id) {
@@ -109,6 +121,7 @@ var gameId = document.getElementById("gameId");
 var getNewCardButton = document.getElementById("getNewCard");
 var cardImageViewer = document.getElementById("cardImage");
 var imageContainer = document.getElementById("imageContainer");
+var exit = document.getElementById("exit");
 
 var preloadedImage;
 var preloadedImageNumber = null;
@@ -118,8 +131,8 @@ function loadCardImage(cardNumber) {
         preloadedImage = document.createElement("img");
         preloadedImage.src = IMAGE_DIR + cardNumber + IMAGE_SUFFIX;
         preloadedImage.style.position = "absolute";
-        preloadedImage.style.top = "250px";
-        preloadedImage.style.left = "250px";
+        preloadedImage.style.top = "-9999px";
+        preloadedImage.style.left = "-9999px";
         console.log("request load " + preloadedImage.src);
         var listener = preloadedImage.addEventListener('load', function () {
             preloadedImage.removeEventListener('load', listener);
@@ -136,10 +149,13 @@ function showCard() {
     if (null != currentImage) {
         imageContainer.removeChild(currentImage);
     }
-    preloadedImage.style.top = "0";
-    preloadedImage.style.left = "0";
-    preloadedImage.style.position = "relative";
+    // preloadedImage.style.top = "0";
+    // preloadedImage.style.left = "0";
+
+    // preloadedImage.style.position = "relative";
     currentImage = preloadedImage;
+    currentImage.id = "cardImage";
+    preloadedImage.classList.add("aspectRatioHack")
     currentImage.onclick = function () {
         getANewCard();
     }
@@ -152,6 +168,12 @@ joinGameButton.onclick = function () {
     var id = gameId.value;
     joinGame(id);
 }
+gameId.addEventListener("keyup", function (e) {
+    if (e.keyCode == ENTER_KEY) {
+        var id = gameId.value;
+        joinGame(id);
+    }
+});
 getNewCardButton.onclick = function () {
     getANewCard();
 }
@@ -160,11 +182,19 @@ function getANewCard() {
     socket.send(JSON.stringify({ type: "aufdecken", id: game.id }));
 }
 
+exit.onclick = function(){
+    refresh();
+}
+
+function refresh() {
+    window.location.replace(window.location.pathname + window.location.search + window.location.hash);
+}
+
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js", {
         scope: "./"
-    })
-        .then((serviceWorker) => {
+    }).
+        then((serviceWorker) => {
             console.log("service worker registration successful");
         })
         .catch((err) => {
