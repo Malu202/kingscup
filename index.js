@@ -111,13 +111,13 @@ function TimeSyncher(sendSyncRequest, onTimeout,
     }
 
     this.getAdjustedServerTime = function () {
-        if (syncResponses.length) {
-            var delays = syncResponses
-                .filter(function (r) {
-                    return !r.invalid;
-                }).map(function (r) {
-                    return Object.assign({}, r);
-                });
+        var delays = syncResponses
+            .filter(function (r) {
+                return !r.invalid;
+            }).map(function (r) {
+                return Object.assign({}, r);
+            });
+        if (delays.length) {
             delays.sort(function (a, b) {
                 return a.delay - b.delay;
             });
@@ -148,7 +148,7 @@ var timeSyncher = new TimeSyncher(function () {
         } else if (pageSwitcher.previousPageName == "loadScreen") {
             pageSwitcher.switchToPage("gamePage");
         }
-    } else {
+    } else if (pageSwitcher.previousPageName == "gamePage") {
         pageSwitcher.switchToPage("loadScreen");
     }
 });
