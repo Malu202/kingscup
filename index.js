@@ -10,10 +10,10 @@ var pageSwitcher = new PageSwitcher();
 function TimeSyncher(sendSyncRequest, onTimeout,
     onSyncStatusChanged) {
 
-    var SYNC_REQUESTS = 5;
+    var SYNC_REQUESTS = 10;
     var MIN_SUCCESSFUL_REQUESTS = 3;
-    var SYNC_INTERVAL = 5000;
-    var MAX_TIME_AGE = 9000;
+    var SYNC_INTERVAL = 10000;
+    var MAX_TIME_AGE = 4 * 60000;
 
     var synched = false;
     var syncInProcess = false;
