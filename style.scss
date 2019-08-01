@@ -12,6 +12,7 @@ $app-bar : #411111;
 @import "@material/elevation/mdc-elevation";
 @import "@material/button/mdc-button";
 @import "@material/icon-button/mdc-icon-button";
+@import "@material/linear-progress/mdc-linear-progress";
 
 .mdc-button__icon {
     padding: 12px;
@@ -23,6 +24,7 @@ html {
     height: 100%;
     width: 100%;
     color: $mdc-theme-primary;
+    background: $poker-table;
 }
 
 .mdc-tab-bar {
@@ -108,4 +110,22 @@ html {
 }
 #getNewCard{
     align-self: center;
+}
+#loadScreen{
+    display:none;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    justify-content: center;
+    align-items:center;
+    background: $poker-table;
+    
+    padding: 64px;
+    box-sizing: border-box;
+    
+}
+#loadScreen > *{
+    margin:8px;
+    // flex: 1 1 auto;
+    // max-width: 400px;
 }

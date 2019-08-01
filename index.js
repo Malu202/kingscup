@@ -2,41 +2,159 @@
 var WS_SERVER = "wss://smallvm.westeurope.cloudapp.azure.com:33712";
 var IMAGE_DIR = "assets/";
 var IMAGE_SUFFIX = ".svg";
-var TIMESYNCINTERVAL = 500;
-var MAX_TIME_AGE = 3 * 60 * 1000;
 var ENTER_KEY = "13";
 
+
 var pageSwitcher = new PageSwitcher();
+
+function TimeSyncher(sendSyncRequest, onTimeout,
+    onSyncStatusChanged) {
+
+    var SYNC_REQUESTS = 5;
+    var MIN_SUCCESSFUL_REQUESTS = 3;
+    var SYNC_INTERVAL = 5000;
+    var MAX_TIME_AGE = 9000;
+
+    var synched = false;
+    var syncInProcess = false;
+    var syncRequestTime = null;
+    var timeoutCancellationToken = null;
+    var requestedSyncCount = SYNC_REQUESTS;
+
+    var syncResponses = [];
+
+    function onSyncTimeout() {
+        syncInProcess = false;
+        onTimeout();
+    }
+
+    function send() {
+        syncRequestTime = performance.now();
+        timeoutCancellationToken = setTimeout(onSyncTimeout,
+            1000);
+        sendSyncRequest();
+    }
+
+    function updateSynchedStatus() {
+        var before = synched;
+        synched = syncResponses.filter(function (r) {
+            return !r.invalid;
+        }).length >= MIN_SUCCESSFUL_REQUESTS;
+        if (before != synched) {
+            onSyncStatusChanged(synched);
+        }
+    }
+
+    this.setUnsynchronized = function () {
+        if (!syncInProcess) {
+            syncInProcess = true;
+            requestedSyncCount = SYNC_REQUESTS;
+            send();
+        }
+        syncResponses.forEach(function (e) {
+            e.invalid = true;
+        });
+        onSyncStatusChanged();
+    }
+
+    function validCount() {
+        var expiredCount = syncResponses.filter(function (r) {
+            return r.invalid || (performance.now() - r.responseTime) >= MAX_TIME_AGE;
+        }).length;
+        return syncResponses.length - expiredCount;
+    }
+
+    function timedSync() {
+        if (!syncInProcess && validCount() < SYNC_REQUESTS) {
+            syncInProcess = true;
+            requestedSyncCount = SYNC_REQUESTS;
+            send();
+        }
+    }
+
+    setInterval(timedSync, SYNC_INTERVAL);
+
+    this.abortSync = function () {
+        if (null != timeoutCancellationToken) {
+            clearTimeout(timeoutCancellationToken);
+            timeoutCancellationToken = null;
+        }
+        syncInProcess = false;
+    }
+
+    this.addSyncResponse = function (serverTime, messageTime) {
+        if (null != timeoutCancellationToken) {
+            clearTimeout(timeoutCancellationToken);
+            timeoutCancellationToken = null;
+        }
+        if (syncInProcess) {
+            syncResponses.push({
+                requestTime: syncRequestTime,
+                serverTime: serverTime,
+                responseTime: messageTime,
+                delay: messageTime - syncRequestTime,
+                invalid: false
+            });
+            updateSynchedStatus();
+            var valid = validCount();
+            if (valid < requestedSyncCount) {
+                send();
+            } else {
+                syncInProcess = false;
+            }
+            if (valid > MIN_SUCCESSFUL_REQUESTS) {
+                syncResponses = syncResponses.filter(function (r) {
+                    return !r.invalid || (performance.now() - r.responseTime) < MAX_TIME_AGE;
+                });
+            }
+        }
+    }
+
+    this.getAdjustedServerTime = function () {
+        if (syncResponses.length) {
+            var delays = syncResponses
+                .filter(function (r) {
+                    return !r.invalid;
+                }).map(function (r) {
+                    return Object.assign({}, r);
+                });
+            delays.sort(function (a, b) {
+                return a.delay - b.delay;
+            });
+            return delays[0].serverTime + (delays[0].delay / 2) + performance.now() - delays[0].responseTime;
+        }
+        return null;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function (event) {
     //the event occurred
     pageSwitcher.switchToPage("loginPage");
-})
+});
 
 var game = null;
-var times = {
-    syncRequestTime: null,
-    requests: [],
-    responses: []
-};
-function getAdjustedServerTime() {
-    if (times.responses && times.responses.length) {
-        var delays = times.responses.map(function (r) {
-            return Object.assign({}, r);
-        });
-        delays.sort(function (a, b) { return a.delay - b.delay; });
-        // return new Date(delays[0].serverTime + (delays[0].delay / 2) + (+new Date() - delays[0].responseTime));
-        console.log("current delay: " + delays[0].delay);
-        return new Date(delays[0].serverTime + (delays[0].delay / 2) + performance.now() - delays[0].responseTime);
-    }
-    return null;
-}
+
 var socket = new WebSocket(WS_SERVER);
+var timeSyncher = new TimeSyncher(function () {
+    socket.send(JSON.stringify({
+        type: "getTime"
+    }));
+}, function () {
+    console.error("timeout");
+}, function (synched) {
+    if (synched) {
+        if (pageSwitcher.previousPageName == "loginPage") {
+            return;
+        } else if (pageSwitcher.previousPageName == "loadScreen") {
+            pageSwitcher.switchToPage("gamePage");
+        }
+    } else {
+        pageSwitcher.switchToPage("loadScreen");
+    }
+});
 socket.onopen = function () {
     console.log("connected");
-    syncTime();
-    // setInterval(function () {
-    //     syncTime()
-    // }, 5000);
+    timeSyncher.setUnsynchronized();
 };
 socket.onerror = function (error) {
     console.log('WebSocket Error ' + error);
@@ -60,7 +178,9 @@ socket.onmessage = function (e) {
         case "created":
             // command.karte <- null
             // command.naechste <- preloaden
-            game = { id: command.id, karte: null };
+            game = {
+                id: command.id, karte: null
+            };
             output.innerHTML = "created " + game.id;
             cardLoadPromise = loadCardImage(command.naechste);
             pageSwitcher.switchToPage("gamePage");
@@ -68,7 +188,10 @@ socket.onmessage = function (e) {
         case "joined":
             // command.karte <- jetzt
             // command.naechste <- preloaden
-            game = { id: command.id, karte: command.karte };
+            game = {
+                id: command.id,
+                karte: command.karte
+            };
             output.innerHTML = "joined " + game.id;
             pageSwitcher.switchToPage("gamePage");
             function loadNaechste() {
@@ -107,7 +230,9 @@ socket.onmessage = function (e) {
                         console.error("falsche karte preloaded");
                     } else {
                         var delay = +new Date() - messageTime;
-                        socket.send(JSON.stringify({ type: "ready", ladezeit: delay, id: game.id }));
+                        socket.send(JSON.stringify({
+                            type: "ready", ladezeit: delay, id: game.id
+                        }));
                     }
                 });
             }
@@ -122,22 +247,7 @@ socket.onmessage = function (e) {
             }, command.delay);
             break;
         case "time":
-            var res = times.requests[0];
-            if (null == res) {
-                console.error("no time response found");
-            }
-            times.requests.splice(times.requests.indexOf(res), 1);
-            times.responses.push({
-                serverTime: command.time,
-                delay: messageTime - res.requestTime,
-                requestTime: res.requestTime,
-                responseTime: messageTime,
-                serverOffset: command.time + ((messageTime - res.requestTime) / 2) - messageTime
-            });
-            console.log("received delay: " + (messageTime - res.requestTime));
-            // times.responses = times.responses.filter(function (r) {
-            //     return r.responseTime - performance.now() < MAX_TIME_AGE;
-            // });
+            timeSyncher.addSyncResponse(command.time, messageTime);
             break;
         default:
             console.error("Falsches Kommando: " + command.type);
@@ -146,11 +256,15 @@ socket.onmessage = function (e) {
 };
 
 function joinGame(id) {
-    socket.send(JSON.stringify({ type: "join", id: id }));
+    socket.send(JSON.stringify({
+        type: "join", id: id
+    }));
 }
 
 function createGame() {
-    socket.send(JSON.stringify({ type: "neu", decks: 2 }));
+    socket.send(JSON.stringify({
+        type: "neu", decks: 2
+    }));
 }
 
 var nextCard;
@@ -196,7 +310,7 @@ function showCard() {
     // preloadedImage.style.position = "relative";
     currentImage = preloadedImage;
     currentImage.id = "cardImage";
-    preloadedImage.classList.add("aspectRatioHack")
+    preloadedImage.classList.add("aspectRatioHack");
     currentImage.onclick = function () {
         getANewCard();
     }
@@ -220,7 +334,9 @@ getNewCardButton.onclick = function () {
 }
 
 function getANewCard() {
-    socket.send(JSON.stringify({ type: "aufdecken", id: game.id }));
+    socket.send(JSON.stringify({
+        type: "aufdecken", id: game.id
+    }));
 }
 
 exit.onclick = function () {
@@ -231,31 +347,16 @@ function refresh() {
     window.location.replace(window.location.pathname + window.location.search + window.location.hash);
 }
 
-function sendSyncRequest() {
-    times.requests.push({ requestTime: performance.now() });
-    socket.send(JSON.stringify({ type: "getTime" }));
-}
-
-var counter = 0;
-
-function syncTime() {
-    times.requests = [];
-    sendSyncRequest();
-    if (counter < 30) {
-        counter++;
-        setTimeout(syncTime, TIMESYNCINTERVAL);
-    }
-}
 
 function logTime() {
-    var serverTime = getAdjustedServerTime();
+    var serverTime = timeSyncher.getAdjustedServerTime();
     if (null == serverTime) {
         setTimeout(logTime, 1000);
     }
     else {
+        serverTime = new Date(serverTime);
         setTimeout(logTime, 1000 - serverTime.getMilliseconds());
         showTime("" + serverTime.getSeconds());
-        console.log(serverTime);
     }
 }
 logTime();
@@ -263,30 +364,31 @@ logTime();
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js", {
         scope: "./"
-    }).
-        then((serviceWorker) => {
-            console.log("service worker registration successful");
-        })
-        .catch((err) => {
-            console.error("service worker registration failed");
-        });
+    }).then((serviceWorker) => {
+        console.log("service worker registration successful");
+    }).catch((err) => {
+        console.error("service worker registration failed");
+    });
 } else {
     console.log('service worker unavailable');
 }
 
+var raphiLog = "";
 
-
-var raphiLog ="";
 function showTime(time) {
     output.innerHTML = raphiLog + time;
 }
 
 function focus() {
-    raphiLog += "f\n";
+    console.log("fh");
+    timeSyncher.setUnsynchronized();
 }
-function blur(){
-    raphiLog += "b\n";
+
+function blur() {
+    console.log("bh");
+    timeSyncher.abortSync();
 }
+
 window.addEventListener("focus", focus);
 document.addEventListener("focus", focus);
 window.addEventListener("blur", blur);
