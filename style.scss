@@ -48,12 +48,12 @@ html {
 }
 
 #kingsContainer {
-    flex-basis: 15%;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-
+    flex-basis: 5em;
+    flex-grow: 1;
 }
 
 .king {
@@ -62,7 +62,8 @@ html {
 }
 
 #imageContainer {
-    flex-basis: 85%;
+    flex-basis: 10em;
+    flex-grow: 10;
     overflow: hidden;
     position: relative;
     background-color: $poker-table;
