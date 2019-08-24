@@ -47,12 +47,27 @@ html {
     // text-overflow: ellipsis;
 }
 
+#kingsContainer {
+    flex-basis: 15%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+}
+
+.king {
+    height: 100%;
+}
 
 #imageContainer {
-    flex: 1 1 auto;
+    flex-basis: 85%;
     overflow: hidden;
     position: relative;
     background-color: $poker-table;
+}
+#shuffleBackIn{
+    flex: 1 1 auto;
 }
 
 /* todo: media query für 4k und größer */
@@ -74,13 +89,13 @@ html {
     flex-direction: column;
     height: 100%;
     width: 100%;
-    background-color: $poker-table;
 }
 #gameTab{
     flex: 1 1 auto;
     display:flex;
     flex-direction: column;
-    margin: 5px;
+    margin: 5px;    
+    background-color: $poker-table;
 }
 #gameTab * {
     margin: 5px;

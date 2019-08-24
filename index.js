@@ -37,13 +37,12 @@ var timeSyncher = new TimeSyncher(function () {
     }
 });
 
-
 function initializeGame(command) {
     game = {
         id: command.id,
         karte: command.karte
     };
-    output.innerHTML = "joined " + game.id;
+
     pageSwitcher.switchToPage("gamePage");
     function loadNaechste() {
         cardLoadPromise = loadCardImage(command.naechste);
@@ -57,6 +56,7 @@ function initializeGame(command) {
     else {
         loadNaechste();
     }
+    setKings(command.kings);
 }
 
 function connect() {
@@ -124,6 +124,7 @@ function connect() {
                     id: game.id,
                     requestDauer: requestDauer
                 }));
+                setKings(command.kings);
                 break;
             case "time":
                 timeSyncher.addSyncResponse(command.time, messageTime);
@@ -158,6 +159,28 @@ var cardImageViewer = document.getElementById("cardImage");
 var imageContainer = document.getElementById("imageContainer");
 var exit = document.getElementById("exit");
 var fullscreen = document.getElementById("fullscreen");
+var gameTab = document.getElementById("gameTab");
+var kings = {};
+[0, 1, 2, 3].forEach(function (n) {
+    kings[n] = document.getElementById("king" + n);
+});
+
+function setKings(k) {
+    var round = Math.floor(k.length / 4);
+    if (round != 0 && k.length %4 == 0) {
+        round--;
+    }
+    var start = round * 4;
+    for(var i = 0; i < 4; i++) {
+        if ((start + i) < k.length) {
+            kings[i].src = IMAGE_DIR + k[start+i] + IMAGE_SUFFIX;
+            kings[i].style.display = "block";
+        }
+        else {
+            kings[i].style.display = "none";
+        }
+    }
+}
 
 if (!document.fullscreenEnabled) {
     fullscreen.style.display = "none";
@@ -200,8 +223,8 @@ function showCard() {
         getANewCard();
     }
 }
-fullscreen.onclick = function(){
-    imageContainer.requestFullscreen();
+fullscreen.onclick = function () {
+    gameTab.requestFullscreen();
 }
 createGameButton.onclick = function () {
     createGame();
@@ -243,7 +266,7 @@ function logTime() {
         showTime("" + serverTime.getSeconds());
     }
 }
-logTime();
+//logTime();
 
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js", {
