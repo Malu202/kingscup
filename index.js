@@ -74,6 +74,7 @@ function connect() {
     };
     socket.onclose = function (e) {
         console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+        pageSwitcher.switchToPage("loadScreen");
         setTimeout(function () {
             connect();
         }, 1000);
