@@ -2,5 +2,6 @@ module.exports = {
     MINIMUM_ID_LENGTH: 3,
     AUFDECK_DELAY: 1000,
     ANTWORT_TIMEOUT: 5000,
-    MAX_REQUEST_TIMES : 50
+    MAX_REQUEST_TIMES : 50,
+    KING_ID : 13
 };

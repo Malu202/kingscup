@@ -21,7 +21,8 @@ parser.join = function (id, ws) {
             type: "joined",
             karte: game.karte,
             id: game.id,
-            naechste: game.naechste
+            naechste: game.naechste,
+            kings: game.kings
         }));
     } catch (e) {
         ws.send(JSON.stringify({ type: "notfound" }));
@@ -34,7 +35,8 @@ parser.neu = function (decks, ws) {
         type: "created",
         id: game.id,
         naechste: game.naechste,
-        karte: game.karte
+        karte: game.karte,
+        kings: game.kings
     }));
 }
 
@@ -53,6 +55,7 @@ parser.aufdecken = function (id, ws) {
                     type: "aufdecken",
                     karte: result.game.karte,
                     naechste: result.game.naechste,
+                    kings: result.game.kings,
                     zeit: +new Date(),
                     um: Math.round(result.um)
                 }));

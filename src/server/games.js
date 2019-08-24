@@ -58,6 +58,9 @@ module.exports = class Games {
                 };
             }
             game.karte = game.cards.pop();
+            if (game.karte != 0 && (game.karte % constants.KING_ID) == 0) {
+                game.kings.push(game.karte);
+            }
             if (game.cards.length > 0) {
                 game.naechste = game.cards[game.cards.length - 1];
             }
@@ -107,6 +110,7 @@ module.exports = class Games {
             id: newGameId(this.games),
             clients: [{ ws: ws, aufdeckRequests: [] }],
             karte: 0,
+            kings: [],
             cards: generateCards(decks),
             letztesAufdecken: new Date(+new Date() - constants.AUFDECK_DELAY)
         };
