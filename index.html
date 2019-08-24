@@ -27,6 +27,8 @@
             <div class="mdc-tab-scroller">
                 <div class="mdc-tab-scroller__scroll-area">
                     <div class="mdc-tab-scroller__scroll-content">
+                            <button aria-label="fullscreen" id="fullscreen"
+                                class="mdc-icon-button material-icons">&#xE5D0;</button>
                         <button class="mdc-tab mdc-tab--active" role="tab" aria-selected="true" tabindex="0">
                             <span class="mdc-tab__content">
                                 <span class="mdc-tab__text-label">Game</span>
@@ -43,15 +45,15 @@
                                 <span class="mdc-tab-indicator__content mdc-tab-indicator__content--underline"></span>
                             </span>
                         </button>
+                        <button aria-label="exit" id="exit" class="mdc-icon-button material-icons">&#xE879;</button>
                     </div>
-                    <button aria-label="exit" id="exit" class="mdc-icon-button material-icons">&#xE879;</button>
+
                 </div>
             </div>
         </div>
         <div id="gameTab">
             <div id="output"> output</div>
             <div id="imageContainer"></div>
-            <button id="getNewCard" class="mdc-button mdc-button--outlined">Draw Card</button>
         </div>
     </div>
     <div id="loadScreen" class="loadScreen">

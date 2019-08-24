@@ -154,10 +154,14 @@ var output = document.getElementById("output");
 var createGameButton = document.getElementById("createGame");
 var joinGameButton = document.getElementById("joinGame");
 var gameId = document.getElementById("gameId");
-var getNewCardButton = document.getElementById("getNewCard");
 var cardImageViewer = document.getElementById("cardImage");
 var imageContainer = document.getElementById("imageContainer");
 var exit = document.getElementById("exit");
+var fullscreen = document.getElementById("fullscreen");
+
+if (!document.fullscreenEnabled) {
+    fullscreen.style.display = "none";
+}
 
 var preloadedImage;
 var preloadedImageNumber = null;
@@ -196,7 +200,9 @@ function showCard() {
         getANewCard();
     }
 }
-
+fullscreen.onclick = function(){
+    imageContainer.requestFullscreen();
+}
 createGameButton.onclick = function () {
     createGame();
 }
@@ -210,9 +216,6 @@ gameId.addEventListener("keyup", function (e) {
         joinGame(id);
     }
 });
-getNewCardButton.onclick = function () {
-    getANewCard();
-}
 
 function getANewCard() {
     socket.send(JSON.stringify({
