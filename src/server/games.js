@@ -1,6 +1,18 @@
 const newGameId = require("./newGameId");
 const constants = require("./constants");
 const generateCards = require("./generate-cards");
+const createDist = require('distributions-normal');
+
+function mean(arr) {
+    return arr.reduce((pv, cv) => pv + cv, 0) / arr.length;
+}
+
+function variance(array) {
+    var m = mean(array);
+    return mean(array.map(function (num) {
+        return Math.pow(num - m, 2);
+    }));
+}
 
 module.exports = class Games {
     constructor() {
@@ -33,8 +45,14 @@ module.exports = class Games {
     educatedGuess(game) {
         let avgTimes = game.clients.map(cl => {
             if (cl.aufdeckRequests.length > 0) {
-                let requests = cl.aufdeckRequests.slice(0, Math.max(1, Math.round(cl.aufdeckRequests.length * 0.9)));
-                return requests.reduce((pv, cv) => pv + cv, 0) / requests.length;
+                var normal = createDist();
+                var mu = mean(cl.aufdeckRequests);
+                var v = variance(cl.aufdeckRequests);
+                normal.mean(mu);
+                normal.variance(v);
+                var [lower, upper] = normal.inv([0.05, 0.95]);
+                let requests = cl.aufdeckRequests.filter(v => v >= lower && v <= upper);
+                return requests[requests.length - 1];
             }
             return null;
         }).filter(t => null != t);
