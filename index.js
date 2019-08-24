@@ -57,6 +57,7 @@ function initializeGame(command) {
         loadNaechste();
     }
     setKings(command.kings);
+    gamelabel.innerHTML = "Game: " + game.id;
 }
 
 function connect() {
@@ -164,6 +165,7 @@ var kings = {};
 [0, 1, 2, 3].forEach(function (n) {
     kings[n] = document.getElementById("king" + n);
 });
+var gamelabel = document.getElementById("gamelabel");
 
 function setKings(k) {
     var round = Math.floor(k.length / 4);
