@@ -7,128 +7,7 @@ var ENTER_KEY = "13";
 
 var pageSwitcher = new PageSwitcher();
 
-function TimeSyncher(sendSyncRequest, onTimeout,
-    onSyncStatusChanged) {
-
-    var SYNC_REQUESTS = 10;
-    var MIN_SUCCESSFUL_REQUESTS = 3;
-    var SYNC_INTERVAL = 10000;
-    var MAX_TIME_AGE = 4 * 60000;
-
-    var synched = false;
-    var syncInProcess = false;
-    var syncRequestTime = null;
-    var timeoutCancellationToken = null;
-    var requestedSyncCount = SYNC_REQUESTS;
-
-    var syncResponses = [];
-
-    function onSyncTimeout() {
-        syncInProcess = false;
-        onTimeout();
-    }
-
-    function send() {
-        syncRequestTime = performance.now();
-        timeoutCancellationToken = setTimeout(onSyncTimeout,
-            1000);
-        sendSyncRequest();
-    }
-
-    function updateSynchedStatus() {
-        var before = synched;
-        synched = syncResponses.filter(function (r) {
-            return !r.invalid;
-        }).length >= MIN_SUCCESSFUL_REQUESTS;
-        if (before != synched) {
-            onSyncStatusChanged(synched);
-        }
-    }
-
-    this.setUnsynchronized = function () {
-        if (!syncInProcess) {
-            syncInProcess = true;
-            requestedSyncCount = SYNC_REQUESTS;
-            send();
-        }
-        syncResponses.forEach(function (e) {
-            e.invalid = true;
-        });
-        onSyncStatusChanged();
-    }
-
-    function validCount() {
-        var expiredCount = syncResponses.filter(function (r) {
-            return r.invalid || (performance.now() - r.responseTime) >= MAX_TIME_AGE;
-        }).length;
-        return syncResponses.length - expiredCount;
-    }
-
-    function timedSync() {
-        if (!syncInProcess && validCount() < SYNC_REQUESTS) {
-            syncInProcess = true;
-            requestedSyncCount = SYNC_REQUESTS;
-            send();
-        }
-    }
-
-    setInterval(timedSync, SYNC_INTERVAL);
-
-    this.abortSync = function () {
-        if (null != timeoutCancellationToken) {
-            clearTimeout(timeoutCancellationToken);
-            timeoutCancellationToken = null;
-        }
-        syncInProcess = false;
-    }
-
-    this.addSyncResponse = function (serverTime, messageTime) {
-        if (null != timeoutCancellationToken) {
-            clearTimeout(timeoutCancellationToken);
-            timeoutCancellationToken = null;
-        }
-        if (syncInProcess) {
-            syncResponses.push({
-                requestTime: syncRequestTime,
-                serverTime: serverTime,
-                responseTime: messageTime,
-                delay: messageTime - syncRequestTime,
-                invalid: false
-            });
-            updateSynchedStatus();
-            var valid = validCount();
-            if (valid < requestedSyncCount) {
-                send();
-            } else {
-                syncInProcess = false;
-            }
-            if (valid > MIN_SUCCESSFUL_REQUESTS) {
-                syncResponses = syncResponses.filter(function (r) {
-                    return !r.invalid || (performance.now() - r.responseTime) < MAX_TIME_AGE;
-                });
-            }
-        }
-    }
-
-    this.getAdjustedServerTime = function () {
-        var delays = syncResponses
-            .filter(function (r) {
-                return !r.invalid;
-            }).map(function (r) {
-                return Object.assign({}, r);
-            });
-        if (delays.length) {
-            delays.sort(function (a, b) {
-                return a.delay - b.delay;
-            });
-            return delays[0].serverTime + (delays[0].delay / 2) + performance.now() - delays[0].responseTime;
-        }
-        return null;
-    }
-}
-
 document.addEventListener('DOMContentLoaded', function (event) {
-    //the event occurred
     pageSwitcher.switchToPage("loginPage");
 });
 
@@ -136,9 +15,13 @@ var game = null;
 
 var socket = new WebSocket(WS_SERVER);
 var timeSyncher = new TimeSyncher(function () {
-    socket.send(JSON.stringify({
-        type: "getTime"
-    }));
+    if (socket.readyState == socket.OPEN) {
+        socket.send(JSON.stringify({
+            type: "getTime"
+        }));
+        return true;
+    }
+    return false;
 }, function () {
     console.error("timeout");
 }, function (synched) {
@@ -295,7 +178,7 @@ function loadCardImage(cardNumber) {
             console.log("loaded " + preloadedImage.src);
             resolve(cardNumber);
         });
-        imageContainer.append(preloadedImage);
+        imageContainer.appendChild(preloadedImage);
     });
 }
 
@@ -364,9 +247,9 @@ logTime();
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js", {
         scope: "./"
-    }).then((serviceWorker) => {
+    }).then(function serviceWorker() {
         console.log("service worker registration successful");
-    }).catch((err) => {
+    }).catch(function error(err) {
         console.error("service worker registration failed");
     });
 } else {
