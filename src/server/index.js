@@ -21,7 +21,7 @@ parser.join = function (id, ws) {
             type: "joined",
             karte: game.karte,
             id: game.id,
-            naechste: game.cards[game.cards.length - 1]
+            naechste: game.naechste
         }));
     } catch (e) {
         ws.send(JSON.stringify({ type: "notfound" }));
@@ -29,20 +29,46 @@ parser.join = function (id, ws) {
 }
 
 parser.neu = function (decks, ws) {
-    let game = games.create(decks);
+    let game = games.create(decks, ws);
     ws.send(JSON.stringify({
         type: "created",
         id: game.id,
-        naechste: game.cards[game.cards.length - 1]
+        naechste: game.naechste,
+        karte: game.karte
     }));
 }
 
 parser.aufdecken = function (id, ws) {
-
+    try {
+        let result = games.aufdecken(id);
+        if (result.ende) {
+            // TODO
+        }
+        else if (result.delay) {
+            // TODO
+        }
+        else {
+            for (let client of result.game.clients) {
+                client.ws.send(JSON.stringify({
+                    type: "aufdecken",
+                    karte: result.game.karte,
+                    naechste: result.game.naechste,
+                    zeit: +new Date(),
+                    um: Math.round(result.um)
+                }));
+            }
+        }
+    } catch (e) {
+        ws.send(JSON.stringify({ type: "notfound" }));
+    }
 }
 
-parser.ready = function (id, ladezeit, ws) {
-
+parser.aufdeckenOk = function (id, requestDauer, ws) {
+    try {
+        games.aufdeckenOk(id, requestDauer, ws);
+    } catch (e) {
+        ws.send(JSON.stringify({ type: "notfound" }));
+    }
 }
 
 parser.getTime = function (ws) {
@@ -55,5 +81,13 @@ parser.getTime = function (ws) {
 wss.on("connection", function connection(ws) {
     ws.on("message", function incoming(message) {
         parser.onMessage(message, ws);
+    });
+    ws.on("error", function (msg) {
+        console.error("ws error", msg);
+        games.removeClient(ws);
+    });
+    ws.on("close", function () {
+        console.log("ws closed");
+        games.removeClient(ws);
     });
 });

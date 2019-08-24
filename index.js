@@ -1,5 +1,5 @@
-// var WS_SERVER = "ws://localhost:33712";
-var WS_SERVER = "wss://smallvm.westeurope.cloudapp.azure.com:33712";
+var WS_SERVER = "ws://localhost:33712";
+// var WS_SERVER = "wss://smallvm.westeurope.cloudapp.azure.com:33712";
 var IMAGE_DIR = "assets/";
 var IMAGE_SUFFIX = ".svg";
 var ENTER_KEY = "13";
@@ -12,10 +12,11 @@ document.addEventListener('DOMContentLoaded', function (event) {
 });
 
 var game = null;
+var socket = null;
+var cardLoadPromise = Promise.resolve();
 
-var socket = new WebSocket(WS_SERVER);
 var timeSyncher = new TimeSyncher(function () {
-    if (socket.readyState == socket.OPEN) {
+    if (socket && socket.readyState == socket.OPEN) {
         socket.send(JSON.stringify({
             type: "getTime"
         }));
@@ -35,108 +36,104 @@ var timeSyncher = new TimeSyncher(function () {
         pageSwitcher.switchToPage("loadScreen");
     }
 });
-socket.onopen = function () {
-    console.log("connected");
-    timeSyncher.setUnsynchronized();
-};
-socket.onerror = function (error) {
-    console.log('WebSocket Error ' + error);
-};
-var cardLoadPromise = Promise.resolve();
-socket.onmessage = function (e) {
-    var messageTime = performance.now();
-    console.log('Server: ' + e.data);
 
-    var command;
-    try {
-        command = JSON.parse(e.data);
+
+function initializeGame(command) {
+    game = {
+        id: command.id,
+        karte: command.karte
+    };
+    output.innerHTML = "joined " + game.id;
+    pageSwitcher.switchToPage("gamePage");
+    function loadNaechste() {
+        cardLoadPromise = loadCardImage(command.naechste);
     }
-    catch (e) {
-        command = null;
+    if (null != game.karte) {
+        loadCardImage(game.karte).then(function () {
+            showCard();
+            loadNaechste();
+        });
     }
-    if (!command || !command.type) {
-        console.error("Falsches Format " + e.data);
+    else {
+        loadNaechste();
     }
-    switch (command.type) {
-        case "created":
-            // command.karte <- null
-            // command.naechste <- preloaden
-            game = {
-                id: command.id, karte: null
-            };
-            output.innerHTML = "created " + game.id;
-            cardLoadPromise = loadCardImage(command.naechste);
-            pageSwitcher.switchToPage("gamePage");
-            break;
-        case "joined":
-            // command.karte <- jetzt
-            // command.naechste <- preloaden
-            game = {
-                id: command.id,
-                karte: command.karte
-            };
-            output.innerHTML = "joined " + game.id;
-            pageSwitcher.switchToPage("gamePage");
-            function loadNaechste() {
-                cardLoadPromise = loadCardImage(command.naechste);
-            }
-            if (null != game.karte) {
-                loadCardImage(game.karte).then(function () {
+}
+
+function connect() {
+    socket = new WebSocket(WS_SERVER);
+    socket.onopen = function () {
+        console.log("connected");
+        timeSyncher.setUnsynchronized();
+        if (null !== game) {
+            joinGame(game.id);
+        }
+    };
+    socket.onerror = function (error) {
+        console.log('WebSocket Error ' + error);
+        socket.close();
+    };
+    socket.onclose = function (e) {
+        console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+        setTimeout(function () {
+            connect();
+        }, 1000);
+    }
+    socket.onmessage = function (e) {
+        var messageTime = performance.now();
+        var serverTime = timeSyncher.getAdjustedServerTime();
+        // console.log('Server: ' + e.data);
+
+        var command;
+        try {
+            command = JSON.parse(e.data);
+        }
+        catch (e) {
+            command = null;
+        }
+        if (!command || !command.type) {
+            console.error("Falsches Format " + e.data);
+        }
+        switch (command.type) {
+            case "created":
+            case "joined":
+                initializeGame(command);
+                break;
+            case "notfound":
+                game = null;
+                pageSwitcher.switchToPage("loginPage");
+                break;
+            case "delay-error":
+                output.innerHTML = "erst nach 5 sekunden wieder!!!";
+                setTimeout(function () {
+                    output.innerHTML = game.id;
+                }, 5000);
+                break;
+            case "aufdecken":
+                var timeout = serverTime > command.um ? 0 : command.um - serverTime;
+                setTimeout(function () {
+                    console.log("wird ent-versteckt");
                     showCard();
-                    loadNaechste();
-                });
-            }
-            else {
-                loadNaechste();
-            }
-            break;
-        case "notfound":
-            game = null;
-            alert("notfound");
-            break;
-        case "delay-error":
-            output.innerHTML = "erst nach 5 sekunden wieder!!!";
-            setTimeout(function () {
-                output.innerHTML = game.id;
-            }, 5000);
-            break;
-        case "aufdecken-vorbereiten":
-            if (command.id != game.id) {
-                console.warn("aufdecken für falsches spiel erhalten, nicht antworten");
-            } else {
-                // command.karte
-                // command.zeit <- serverzeit
-                console.log("ich bereite aufdecken von " + command.karte + " vor, aber pschhhhhht");
-
-                cardLoadPromise.then(function (number) {
-                    if (number != command.karte) {
-                        console.error("falsche karte preloaded");
-                    } else {
-                        var delay = +new Date() - messageTime;
-                        socket.send(JSON.stringify({
-                            type: "ready", ladezeit: delay, id: game.id
-                        }));
-                    }
-                });
-            }
-            break;
-        case "aufdecken":
-            // command.naechste
-            setTimeout(function () {
-                console.log("wird ent-versteckt");
-                showCard();
-                console.log("ich bereite " + command.naechste + " vor, aber pschhhhhht");
-                cardLoadPromise = loadCardImage(command.naechste);
-            }, command.delay);
-            break;
-        case "time":
-            timeSyncher.addSyncResponse(command.time, messageTime);
-            break;
-        default:
-            console.error("Falsches Kommando: " + command.type);
-            break;
-    }
-};
+                    console.log("ich bereite " + command.naechste + " vor, aber pschhhhhht");
+                    cardLoadPromise = loadCardImage(command.naechste);
+                }, timeout);
+                console.log("aufdeck-delay: " + timeout);
+                var requestDauer = serverTime - command.zeit;
+                socket.send(JSON.stringify({
+                    type: "aufdecken-ok",
+                    id: game.id,
+                    requestDauer: requestDauer
+                }));
+                break;
+            case "time":
+                timeSyncher.addSyncResponse(command.time, messageTime);
+                break;
+            default:
+                console.error("Falsches Kommando: " + command.type);
+                break;
+        }
+    };
+}
+connect();
 
 function joinGame(id) {
     socket.send(JSON.stringify({
@@ -260,6 +257,11 @@ var raphiLog = "";
 
 function showTime(time) {
     output.innerHTML = raphiLog + time;
+
+    // if (time <= 52) {
+    //     // loadCardImage(time);
+    //     // showCard();
+    // }
 }
 
 function focus() {

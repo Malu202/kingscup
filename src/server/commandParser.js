@@ -29,9 +29,9 @@ module.exports = class CommandParser {
                     this.aufdecken(command.id, ws);
                     break;
                 }
-            case "ready":
-                if (undefined != command.id && undefined != command.ladezeit) {
-                    this.ready(command.id, command.ladezeit, ws);
+            case "aufdecken-ok":
+                if (undefined != command.id) {
+                    this.aufdeckenOk(command.id, command.requestDauer, ws);
                     break;
                 }
             case "getTime":
