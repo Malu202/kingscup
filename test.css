@@ -33,7 +33,8 @@
   grid-row: 2;
   -ms-grid-column: 1;
   -ms-grid-column-span: 4;
-  grid-column: 1 / span 4; }
+  grid-column: 1 / span 4;
+  width: 100%; }
 
 .King0 {
   -ms-grid-column: 1;

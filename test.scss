@@ -21,6 +21,7 @@
    .Card {
        grid-row: 2;
        grid-column: 1 / span 4;
+       width: 100%;
        @extend %flex;
    }
 
