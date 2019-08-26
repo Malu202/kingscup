@@ -19,7 +19,7 @@
   -webkit-box-direction: normal;
   -ms-flex-direction: column;
   flex-direction: column;
-  width: 100%;
+  width: auto;
   -webkit-box-pack: center;
   -ms-flex-pack: center;
   justify-content: center;
@@ -55,17 +55,9 @@
   -ms-grid-column-span: 1;
   grid-column: 4 / span 1; }
 
-.king-img {
-  width: 100%;
-  -o-object-fit: cover;
-  object-fit: cover; }
-
 .card-img {
-  height: 100%; }
-
-.king-container {
-  border: 1px dashed;
   -webkit-box-flex: 1;
   -ms-flex-positive: 1;
   flex-grow: 1;
-  overflow: hidden; }
+  overflow: hidden;
+  height: 100%; }
