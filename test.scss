@@ -1,0 +1,54 @@
+   .grid-container {
+       display: grid;
+       grid-template-columns: 1fr 1fr 1fr 1fr;
+       grid-template-rows: 2fr 8fr;
+       height: 100%;
+   }
+
+   .grid-container>* {
+       justify-self: center
+   }
+
+   %flex {
+       display: flex;
+       flex-direction: column;
+       width: 100%;
+       justify-content: center;
+       align-items: center;
+       overflow: hidden;
+   }
+
+   .Card {
+       grid-row: 2;
+       grid-column: 1 / span 4;
+       @extend %flex;
+   }
+
+   .King0 {
+       grid-column: 1 / span 1;
+       @extend %flex;
+   }
+
+   .King1 {
+       grid-column: 2 / span 1;
+       @extend %flex;
+
+   }
+
+   .King2 {
+       grid-column: 3 / span 1;
+       @extend %flex;
+
+   }
+
+   .King3 {
+       grid-column: 4 / span 1;
+       @extend %flex;
+   }
+
+   .card-img {
+       border: 1px dashed;
+       flex-grow: 1;
+       overflow: hidden;
+       height: 100%;
+   }

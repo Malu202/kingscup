@@ -15,6 +15,16 @@ gulp.task('css', function () {
         .pipe(gulp.dest("./"));
 });
 
+gulp.task('gridtest', function () {
+    return gulp.src('./test.scss')
+        .pipe(sass({  includePaths: 'node_modules' }).on('error', sass.logError))
+        .pipe(autoprefixer({
+            cascade: false,
+            grid:true
+        }))
+        .pipe(gulp.dest("./"));
+});
+
 gulp.task('default', gulp.series('css'));
 
 gulp.task('watch', gulp.series('default', function () {

@@ -16,5 +16,9 @@
   "scripts": {
     "build": "gulp",
     "watch": "gulp watch"
-  }
+  },
+  "browserslist": [
+    "last 2 versions",
+    "IE 11"
+  ]
 }
