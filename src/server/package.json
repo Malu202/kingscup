@@ -13,7 +13,7 @@
     "distributions-normal": "^2.0.2",
     "fs": "0.0.1-security",
     "https": "^1.0.0",
-    "minimist": "^1.2.0",
+    "minimist": "^1.2.2",
     "ws": "^7.1.0"
   }
 }
